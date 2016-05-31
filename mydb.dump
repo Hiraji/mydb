@@ -1,0 +1,435 @@
+-- phpMyAdmin SQL Dump
+-- version 4.1.14
+-- http://www.phpmyadmin.net
+--
+-- Host: 127.0.0.1
+-- Generation Time: May 31, 2016 at 01:20 PM
+-- Server version: 5.6.17
+-- PHP Version: 5.5.12
+
+/* SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO"; */
+time_zone := "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+
+--
+-- Database: `ced`
+--
+
+DELIMITER $$
+--
+-- Procedures
+--
+CREATE OR REPLACE  FUNCTION addEmployee(IN id INT, IN name VARCHAR(50), IN mobno BIGINT, IN curadd VARCHAR(100), IN peradd VARCHAR(100), IN bloodgroup VARCHAR(11), IN emergcontno BIGINT, IN emailid VARCHAR(50), IN lat DOUBLE PRECISION, IN log DOUBLE PRECISION) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+insert into employee (Employee_Id,Employee_Name,Employee_MobNo,Employee_CurrentAddress,Employee_PermanentAddress,Employee_BloodGroup,Employee_EmergencyContactNo,Employee_Email,Employee_latitude,Employee_logitude) values (id,name,mobno,curadd,peradd,bloodgroup,emergcontno,emailid,lat,log)
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION addEmployeeLogin(IN id VARCHAR(50), IN pass VARCHAR(20)) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+insert INTO employeelogin (Employee_id,Password)values(id,pass)
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION addOrder(IN id INT, IN tdate DATE, IN status VARCHAR(20), IN brkid INT) RETURNS VOID
+    NO SQL
+as $$
+begin
+  IF EXISTS (select * from employee_order where employee_id=id and date=tdate) THEN
+    update employee_order set breakfast_id= brkid where employee_id = id and date=tdate ;
+  ELSE 
+    insert into employee_order(Employee_id,Date,Status,Breakfast_id)values(id,tdate,status,brkid);
+  END IF;
+end;
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION getAllEmployee() RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+SELECT *  from employee$
+$$ LANGUAGE plpgsql;$
+
+CREATE OR REPLACE  FUNCTION getBreakfastlist(IN VendoreName VARCHAR(25)) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+SELECT * FROM breakfast where VendoreName=VendoreName
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION getBreakfastNotification(IN empID INT) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+SELECT EXISTS(SELECT * FROM employee_order WHERE Employee_id=empID and Date=curdate()
+$$ LANGUAGE plpgsql;) as empAvailability$$
+
+CREATE OR REPLACE  FUNCTION getEmployeeByDate() RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+select sum(case when Breakfast_id = 2  then 1 else 0 end) as 'MisalPav' ,sum(case when Breakfast_id = 1  then 1 else 0 end) as poha, sum(case when Breakfast_id = 3  then 1 else 0 end) as Upma, sum(case when Breakfast_id = 4  then 1 else 0 end) as 'BurgiPav', sum(case when Breakfast_id = 5  then 1 else 0 end) as 'SabudanaKhichdi',sum(case when sample_id = 1  then 1 else 0 end) as 'PohaSample',sum(case when sample_id = 2  then 1 else 0 end) as 'MisalSample' from employee_order where Date = CURDATE()
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION getEmployeeById(IN id INT) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+SELECT * from employee WHERE Employee_Id=id
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION getemployeedetails(IN pid INT) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+select Concat(empname,',')from (select e.employee_name as empName,b.Breakfast_id as breakFastId from employeenames as e join employee_order as b
+$$ LANGUAGE plpgsql; on e.Employee_id = b.Employee_id) as t where breakFastId=pid$$
+
+CREATE OR REPLACE  FUNCTION getemployeeOrderDetails() RETURNS VOID
+    NO SQL
+AS $$
+
+DECLARE done INT DEFAULT FALSE;
+ b INT;
+DECLARE cur1 CURSOR for SELECT Breakfast_id FROM breakfast;
+BEGIN
+ 
+ DECLARE CONTINUE HANDLER FOR NOT FOUND done := TRUE;
+-- truncate table employeedetail;
+create  temporary  table  employeedetail
+(
+    ProductName     varchar(50),
+    ProductCount  int(10),
+    EmpName varchar(50)  null
+   );
+
+  OPEN cur1;
+ 
+  read_loop: LOOP
+    FETCH cur1 INTO b;
+    
+    IF done THEN
+      LEAVE read_loop;
+    END IF;
+    
+   -- select  b;
+   
+    INSERT INTO employeedetail values(  
+    getProduct(b),  getProductcount(b), getEmployeeNames(b) );
+ --select  b; 
+ -- select  getProduct(b);
+  --select   getProductcount(b);
+  --select    getEmployeeNames(b);
+  END LOOP;
+
+  CLOSE cur1;
+  select * from employeedetail where productcount>0;
+  DROP TEMPORARY TABLE employeedetail;
+  
+END;
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION getSampleList() RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+SELECT * FROM breakfastsample WHERE 1$$
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE  FUNCTION placeEmployeeAttendance(IN id INT, IN intime TIME(0), IN date DATE) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+insert into employeeattendence(empid,intime,date)values(id,intime,date)
+$$ LANGUAGE plpgsql;$$
+
+CREATE OR REPLACE  FUNCTION updateEmployeeInfo(IN id INT, IN name VARCHAR(50), IN mobno BIGINT, IN curadd VARCHAR(100), IN peradd VARCHAR(100), IN bloodgroup VARCHAR(11), IN emergcontno BIGINT, IN emailid VARCHAR(50), IN lat DOUBLE PRECISION, IN log DOUBLE PRECISION) RETURNS VOID
+    NO SQL AS $$
+
+BEGIN
+Update employee
+set Employee_Name=name,Employee_MobNo=mobno,Employee_CurrentAddress=curadd,Employee_PermanentAddress=peradd,Employee_BloodGroup=bloodgroup,Employee_EmergencyContactNo=emergcontno,EmployeeEmail=Emailid,Employee_latitude=lat,Employee_logitude=log
+where Employee_Id=id
+$$ LANGUAGE plpgsql;$$
+
+--
+-- Functions
+--
+CREATE OR REPLACE  FUNCTION getEmployeeNames(pid INT) RETURNS varchar(50) AS $$
+
+BEGIN CHARSET
+$$ LANGUAGE plpgsql; latin1
+    NO SQL
+BEGIN
+  DECLARE NAME_FOUND VARCHAR(50);
+    select group_Concat(t.empname separator ', ')as ename  INTO NAME_FOUND from (select (SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(e.employee_email, '@', 1), '.', 1)) as empName,b.Breakfast_id as breakFastId from employeelogin as e join employee_order as b on e.Employee_id = b.Employee_id where Date=curdate()) as t where breakFastId=pid;
+  RETURN NAME_FOUND;
+END$$
+
+CREATE OR REPLACE  FUNCTION getProduct(PID INT) RETURNS varchar(50) AS $$
+
+BEGIN CHARSET
+$$ LANGUAGE plpgsql; latin1
+BEGIN
+  DECLARE NAME_FOUND VARCHAR(50);
+    SELECT breakfast_name INTO NAME_FOUND FROM breakfast WHERE breakfast_id = PID;
+  RETURN NAME_FOUND;
+END$$
+
+CREATE OR REPLACE  FUNCTION getProductcount(PID INT) RETURNS int
+AS $$
+
+  DECLARE NAME_FOUND int;
+BEGIN
+  select count(`Breakfast_id`) into name_found from employee_order where Breakfast_id = pid and Date=curdate();
+  RETURN NAME_FOUND;
+END;
+$$ LANGUAGE plpgsql;$$
+
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `breakfast`
+--
+
+CREATE TABLE IF NOT EXISTS breakfast (
+  Breakfast_id int NOT NULL,
+  Breakfast_Name varchar(50) NOT NULL,
+  VendoreName varchar(25) NOT NULL,
+  PRIMARY KEY (Breakfast_id)
+) ;
+
+--
+-- Dumping data for table `breakfast`
+--
+
+INSERT INTO breakfast (Breakfast_id, Breakfast_Name, VendoreName) VALUES
+(1, 'Poha', 'Vikram'),
+(2, 'MisalPav', 'Vikram'),
+(3, 'Upma', 'Vikram'),
+(4, 'BurjiPav', 'Vikram'),
+(5, 'Sabudana Khichadi', 'Vikram'),
+(6, 'Poha With Sample', 'Vikram'),
+(7, 'Misal Pav With Sample', 'Vikram'),
+(8, 'Sheera', 'Vikram'),
+(9, 'Vada Pav ', 'Vikram'),
+(10, 'Bread Pattice', 'Vikram'),
+(11, 'Bun Maska', 'Vikram'),
+(12, 'Idli Sambar', 'Vikram'),
+(13, 'Batata Vada Samber', 'Vikram');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employee`
+--
+
+CREATE TABLE IF NOT EXISTS employee (
+  Employee_id int NOT NULL,
+  Employee_Name varchar(50) NOT NULL,
+  Employee_MobNo bigint NOT NULL,
+  Employee_CurrentAddress varchar(100) NOT NULL,
+  Employee_PermanentAddress varchar(100) NOT NULL,
+  Employee_BloodGroup varchar(11) NOT NULL,
+  Employee_EmergencyContactNo bigint NOT NULL,
+  Employee_Email varchar(50) NOT NULL,
+  Employee_latitude double precision NOT NULL,
+  Employee_logitude double precision NOT NULL,
+  PRIMARY KEY (Employee_id)
+) ;
+
+--
+-- Dumping data for table `employee`
+--
+
+INSERT INTO employee (Employee_id, Employee_Name, Employee_MobNo, Employee_CurrentAddress, Employee_PermanentAddress, Employee_BloodGroup, Employee_EmergencyContactNo, Employee_Email, Employee_latitude, Employee_logitude) VALUES
+(1, 'Yashodip', 77094, 'Pune', 'Pune', 'A+', 77094, 'test@test.com', 0, 0),
+(2, 'rohit', 888888, 'pune', 'pune', 'a', 999999, 'rohit@gmail.com', 0, 0),
+(3, 'yadnesh', 879456, 'pune', 'pune', 'a', 898745, 'rohit@cmsms.com', 0, 0),
+(4, 'baba', 7350721350, 'pune', 'pune', 'a', 7350721350, 'baba@com.com', 0, 0),
+(5, 'ya', 8745698547, 'na', 'na', 'b', 7845123695, 'cscsdc@gmail.com', 0, 0),
+(6, 'jb  ,n', 7896541236, 'njhkbkj', 'kjbkjkjb', 'b', 3214569874, 'hjkbkjb@gmail.com', 0, 0),
+(7, 'rahul', 32146569874, 'sa', 'sa', 'o', 3214569874, 'sa@gmail.com', 0, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employeeattendence`
+--
+
+CREATE SEQUENCE employeeattendence_seq;
+
+CREATE TABLE IF NOT EXISTS employeeattendence (
+  SerialNo int NOT NULL DEFAULT NEXTVAL ('employeeattendence_seq'),
+  EmpId int NOT NULL,
+  InTime time(0) NOT NULL,
+  OutTime time(0) NOT NULL,
+  date date NOT NULL
+)    ;
+ 
+ALTER SEQUENCE employeeattendence_seq RESTART WITH 4;
+
+CREATE INDEX SerialNo ON employeeattendence (SerialNo);
+
+--
+-- Dumping data for table `employeeattendence`
+--
+
+INSERT INTO employeeattendence (SerialNo, EmpId, InTime, OutTime, date) VALUES
+(1, 1, '11:00:00', '00:00:00', '2016-05-20'),
+(2, 68, '09:00:00', '00:00:00', '2016-05-20'),
+(3, 1, '09:00:00', '00:00:00', '2016-05-21');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employeelogin`
+--
+
+CREATE SEQUENCE employeelogin_seq;
+
+CREATE TABLE IF NOT EXISTS employeelogin (
+  Employee_LoginId int NOT NULL DEFAULT NEXTVAL ('employeelogin_seq'),
+  Employee_id int NOT NULL,
+  Password varchar(20) NOT NULL,
+  Employee_email varchar(50) NOT NULL,
+  PRIMARY KEY (Employee_LoginId)
+)    ;
+ 
+ALTER SEQUENCE employeelogin_seq RESTART WITH 25;
+
+--
+-- Dumping data for table `employeelogin`
+--
+
+INSERT INTO employeelogin (Employee_LoginId, Employee_id, Password, Employee_email) VALUES
+(3, 68, 'one', 'hiraji@compumatrice.com'),
+(9, 82, 'shyam', 'shyam@compumatrice.com'),
+(5, 56, 'vishal', 'vishal@compumatrice.com'),
+(6, 14, 'sachin', 'sachin@compumatrice.com'),
+(7, 66, 'pooja', 'pooja@compumatrice.com'),
+(8, 70, 'vishal', 'vishal@compumatrice.com'),
+(10, 80, 'chetan', 'chetan@compumatrice.com'),
+(11, 75, 'Rohini', 'rohini@compumatrice.com'),
+(12, 81, 'ganesh', 'ganesh@compumatrice.com'),
+(13, 69, 'rohit', 'rohit@compumatrice.com'),
+(14, 39, 'harshal', 'harshal@compumatrice.com'),
+(15, 2, 'ravi', 'ravi@compumatrice.com'),
+(16, 22, 'Neha', 'neha@compumatrice.com'),
+(17, 74, 'Yashodip', 'yashodip@compumatrice.com'),
+(18, 87, 'rishikesh', 'rishikesh@compumatrice.com'),
+(19, 88, 'Devesh', 'devesh@compumatrice.com'),
+(20, 89, 'Rahul', 'rahuln@compumatrice.com'),
+(21, 90, 'sagar', 'sagar@compumatrice.com'),
+(22, 91, 'Jaydeep', 'jaydeep@compumatrice.com'),
+(23, 92, 'Bhushan', 'bhushan@compumatrice.com'),
+(24, 93, 'srikrishna', 'srikrishna@compumatrice.com');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employeenames`
+--
+
+CREATE TABLE IF NOT EXISTS employeenames (
+  Employee_id int NOT NULL,
+  Employee_name varchar(50) NOT NULL
+) ;
+
+--
+-- Dumping data for table `employeenames`
+--
+
+INSERT INTO employeenames (Employee_id, Employee_name) VALUES
+(86, 'Hiraji'),
+(70, 'Vishal'),
+(82, 'Shyam'),
+(80, 'Chetan'),
+(75, 'Rohini'),
+(81, 'Ganesh'),
+(69, 'Rohit'),
+(66, 'Pooja'),
+(39, 'Harshal');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `employee_order`
+--
+
+CREATE SEQUENCE employee_order_seq;
+
+CREATE TABLE IF NOT EXISTS employee_order (
+  Employee_Order_id int NOT NULL DEFAULT NEXTVAL ('employee_order_seq'),
+  Employee_id varchar(50) NOT NULL,
+  Date date NOT NULL,
+  Status varchar(20) NOT NULL,
+  Breakfast_id int NOT NULL,
+  PRIMARY KEY (Employee_Order_id)
+)    ;
+ 
+ALTER SEQUENCE employee_order_seq RESTART WITH 139;
+
+--
+-- Dumping data for table `employee_order`
+--
+
+INSERT INTO employee_order (Employee_Order_id, Employee_id, Date, Status, Breakfast_id) VALUES
+(132, '68', '2016-05-29', 'true', 2),
+(107, '86', '2016-05-16', 'true', 1),
+(106, '70', '2016-05-13', 'true', 1),
+(105, '70', '2016-05-13', 'true', 1),
+(108, '66', '2016-05-16', 'true', 1),
+(109, '70', '2016-05-16', 'true', 4),
+(110, '66', '2016-05-13', 'true', 4),
+(112, '1', '2016-05-16', 'true', 1),
+(113, '86', '2016-05-17', 'true', 3),
+(114, '86', '2016-05-18', 'true', 2),
+(115, '86', '2016-05-19', 'true', 3),
+(116, '86', '2016-05-13', 'true', 4),
+(117, '86', '2016-05-22', 'true', 4),
+(118, '86', '2016-05-16', 'true', 3),
+(119, '86', '2016-05-16', 'true', 1),
+(120, '70', '2016-05-16', 'true', 1),
+(126, '55', '2016-05-19', 'true', 7),
+(123, '70', '2016-05-17', 'true', 5),
+(127, '2', '2016-05-28', 'true', 1),
+(131, '68', '2016-05-27', 'true', 4),
+(133, '68', '2016-06-01', 'true', 4),
+(134, '2', '2016-05-27', 'true', 1),
+(135, '81', '2016-05-27', 'true', 2),
+(136, '81', '2016-05-28', 'true', 3),
+(137, '68', '0000-00-00', 'true', 4),
+(138, '68', '2016-05-31', 'true', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vendornames`
+--
+
+CREATE TABLE IF NOT EXISTS vendornames (
+  vendor_id int NOT NULL,
+  vendor_names varchar(50) NOT NULL
+) ;
+
+--
+-- Dumping data for table `vendornames`
+--
+
+INSERT INTO vendornames (vendor_id, vendor_names) VALUES
+(1, 'Gandharv (Vikram)'),
+(2, 'Ruchira');
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
